@@ -1,0 +1,16 @@
+{
+  "name": "AntiBloat",
+  "description": "Removes Nitro, Quests and Monetization tabs from Discord.",
+  "authors": [
+    {
+      "name": "Lawtro",
+      "id": "965032467218202655"
+    }
+  ],
+  "main": "index.js",
+  "vendetta": {
+    "icon": "ic_block",
+    "original": "https://yourdomain.com/AntiBloat/"
+  },
+  "hash": ""
+}
