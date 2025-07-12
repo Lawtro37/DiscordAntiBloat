@@ -3,7 +3,82 @@ import { storage } from "@vendetta/plugin";
 import { findByName } from "@vendetta/metro";
 import { after } from "@vendetta/patcher";
 
+// WebSocket Debugger for Kettu
+class KettuDebugger {
+  constructor() {
+    this.serverUrl = storage.debugServerUrl ?? 'ws://192.168.56.1:8081';
+    this.ws = null;
+    this.isConnected = false;
+  }
+
+  connect() {
+    if (!storage.debugMode) return;
+    
+    try {
+      console.log(`[KettuDebug] Connecting to ${this.serverUrl}...`);
+      this.ws = new WebSocket(this.serverUrl);
+
+      this.ws.onopen = () => {
+        this.isConnected = true;
+        console.log('[KettuDebug] ✅ Connected to debug server');
+        this.send({
+          type: 'connection',
+          plugin: 'AntiBloat',
+          userAgent: navigator.userAgent,
+          url: window.location.href,
+          timestamp: new Date().toISOString()
+        });
+      };
+
+      this.ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('[KettuDebug] 📨 Received:', data);
+        } catch (e) {
+          console.log('[KettuDebug] 📨 Raw:', event.data);
+        }
+      };
+
+      this.ws.onclose = () => {
+        this.isConnected = false;
+        console.log('[KettuDebug] ❌ Connection closed');
+      };
+
+      this.ws.onerror = (error) => {
+        console.log('[KettuDebug] 🚨 Error:', error);
+      };
+    } catch (error) {
+      console.log('[KettuDebug] ❌ Failed to connect:', error);
+    }
+  }
+
+  send(data) {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify(data));
+    }
+  }
+
+  log(message, data = null) {
+    const logData = {
+      type: 'log',
+      message: message,
+      data: data,
+      timestamp: new Date().toISOString()
+    };
+    console.log(`[AntiBloat] ${message}`, data);
+    this.send(logData);
+  }
+
+  disconnect() {
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
+    }
+  }
+}
+
 let patches = [];
+let wsDebugger = null;
 
 // Function to hide bloat elements
 const hideElements = () => {
@@ -94,6 +169,10 @@ export default {
       document.head.appendChild(style);
       this.styleElement = style;
 
+      // Initialize debugger
+      wsDebugger = new KettuDebugger();
+      wsDebugger.connect();
+
     } else {
       console.log("[AntiBloat] Anti-bloat is disabled!");
     }
@@ -123,5 +202,11 @@ export default {
     hiddenElements.forEach(el => {
       el.style.display = '';
     });
+
+    // Disconnect debugger
+    if (wsDebugger) {
+      wsDebugger.disconnect();
+      wsDebugger = null;
+    }
   }
 };
