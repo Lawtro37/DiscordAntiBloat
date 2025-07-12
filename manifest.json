@@ -7,7 +7,7 @@
       "id": "965032467218202655"
     }
   ],
-  "main": "index.js",
+  "main": "./index.js",
   "vendetta": {
     "icon": "ic_block",
     "original": "https://yourdomain.com/AntiBloat/"
