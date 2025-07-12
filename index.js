@@ -1,95 +1,68 @@
-let patches = [];
-
-import vendetta from "@vendetta/metro";
-import { FormSwitchRow } from "@vendetta/ui/components/Forms";
-import { ScrollView } from "@vendetta/ui/components/General";
-import { storage } from "@vendetta/storage";
-import { after } from "@vendetta/patcher";
+import settings from "./settings.jsx";
+import { storage } from "@vendetta/plugin";
 import { findByProps } from "@vendetta/metro";
+import { after } from "@vendetta/patcher";
 
 function safePatch(name, fn) {
   try {
-    fn();
+    return fn();
   } catch (e) {
-    console.log(`[AntiBloat] Error in ${name}:`, e);
+    console.error(`[AntiBloat] Error in ${name}:`, e);
   }
 }
 
-function hideNitroUpsell() {
-  safePatch("hideNitroUpsell", () => {
-    const Upsell = findByProps("tryItOutCtaText");
-    if (!Upsell) return;
-    patches.push(after("default", Upsell, (_, ret) => null));
-  });
-}
-
-function hideQuests() {
-  safePatch("hideQuests", () => {
-    const GuildHome = findByProps("useGuildHome");
-    if (!GuildHome) return;
-    patches.push(after("useGuildHome", GuildHome, (_, ret) => {
-      ret.shouldShowQuests = false;
-      ret.guildHomeSections = ret.guildHomeSections?.filter(
-        section => section.sectionType !== "QUESTS"
-      );
-    }));
-  });
-}
-
-function hideExploreAndMonetization() {
-  safePatch("hideExploreAndMonetization", () => {
-    const TabBar = findByProps("TabBarItem");
-    if (!TabBar) return;
-    patches.push(after("TabBarItem", TabBar, ([args], ret) => {
-      if (["Explore", "Monetization"].includes(args.title)) return null;
-      return ret;
-    }));
-  });
-}
-
-// Apply patches based on storage toggles
-function applyPatches() {
-  if (storage.hideNitro ?? true) hideNitroUpsell();
-  if (storage.hideQuests ?? true) hideQuests();
-  if (storage.hideTabs ?? true) hideExploreAndMonetization();
-}
-
-// Plugin export
-module.exports = {
+export default {
+  settings,
+  patches: [],
   onLoad() {
-    applyPatches();
-  },
+    // Default toggle values
+    storage.hideNitro ??= true;
+    storage.hideQuests ??= true;
+    storage.hideTabs ??= true;
 
+    if (storage.hideNitro) {
+      const Upsell = findByProps("tryItOutCtaText");
+      if (Upsell) {
+        this.patches.push(
+          safePatch("hideNitroUpsell", () =>
+            after("default", Upsell, () => null)
+          )
+        );
+      }
+    }
+
+    if (storage.hideQuests) {
+      const GuildHome = findByProps("useGuildHome");
+      if (GuildHome) {
+        this.patches.push(
+          safePatch("hideQuests", () =>
+            after("useGuildHome", GuildHome, (_, ret) => {
+              ret.shouldShowQuests = false;
+              ret.guildHomeSections = ret.guildHomeSections?.filter(
+                s => s.sectionType !== "QUESTS"
+              );
+            })
+          )
+        );
+      }
+    }
+
+    if (storage.hideTabs) {
+      const TabBar = findByProps("TabBarItem");
+      if (TabBar) {
+        this.patches.push(
+          safePatch("hideExploreAndMonetization", () =>
+            after("TabBarItem", TabBar, ([args], ret) => {
+              if (["Explore", "Monetization"].includes(args.title)) return null;
+              return ret;
+            })
+          )
+        );
+      }
+    }
+  },
   onUnload() {
-    patches.forEach(unpatch => unpatch());
-    patches = [];
+    this.patches.forEach(unpatch => unpatch());
+    this.patches = [];
   },
-
-  settings() {
-    return (
-      <ScrollView style={{ flex: 1 }}>
-        <FormSwitchRow
-          label="Hide Nitro upsell banners"
-          value={storage.hideNitro ?? true}
-          onValueChange={(value) => {
-            storage.hideNitro = value;
-          }}
-        />
-        <FormSwitchRow
-          label="Hide Server Quests"
-          value={storage.hideQuests ?? true}
-          onValueChange={(value) => {
-            storage.hideQuests = value;
-          }}
-        />
-        <FormSwitchRow
-          label="Hide Explore/Monetization Tabs"
-          value={storage.hideTabs ?? true}
-          onValueChange={(value) => {
-            storage.hideTabs = value;
-          }}
-        />
-      </ScrollView>
-    );
-  }
 };
