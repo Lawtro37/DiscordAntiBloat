@@ -1,10 +1,11 @@
 let patches = [];
 
-const { findByProps } = vendetta.metro;
-const { after } = vendetta.patcher;
-const { storage } = vendetta;
-const { FormSwitchRow } = vendetta.ui.components.Forms;
-const { ScrollView } = vendetta.ui.components.General;
+import vendetta from "@vendetta/metro";
+import { FormSwitchRow } from "@vendetta/ui/components/Forms";
+import { ScrollView } from "@vendetta/ui/components/General";
+import { storage } from "@vendetta/storage";
+import { after } from "@vendetta/patcher";
+import { findByProps } from "@vendetta/metro";
 
 function safePatch(name, fn) {
   try {
