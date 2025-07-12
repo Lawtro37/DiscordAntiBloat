@@ -4,24 +4,14 @@ import { Forms, General } from "@vendetta/ui/components";
 const { ScrollView } = General;
 const { FormSwitchRow } = Forms;
 
-export default () => {
-  return (
-    <ScrollView style={{ flex: 1 }}>
-      <FormSwitchRow
-        label="Hide Nitro Upsells"
-        value={storage.hideNitro ?? true}
-        onValueChange={v => (storage.hideNitro = v)}
-      />
-      <FormSwitchRow
-        label="Hide Server Quests"
-        value={storage.hideQuests ?? true}
-        onValueChange={v => (storage.hideQuests = v)}
-      />
-      <FormSwitchRow
-        label="Hide Explore/Monetization Tabs"
-        value={storage.hideTabs ?? true}
-        onValueChange={v => (storage.hideTabs = v)}
-      />
-    </ScrollView>
-  );
-};
+export default () => (
+  <ScrollView style={{ flex: 1 }}>
+    <FormSwitchRow
+      label="Enable plugin feature"
+      value={storage.enabled ?? true}
+      onValueChange={(value) => {
+        storage.enabled = value;
+      }}
+    />
+  </ScrollView>
+);
