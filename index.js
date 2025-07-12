@@ -3,9 +3,12 @@ import { storage } from "@vendetta/plugin";
 import { findByProps } from "@vendetta/metro";
 import { after } from "@vendetta/patcher";
 
+let patches = [];
+
 function safePatch(name, fn) {
   try {
-    return fn();
+    const unpatch = fn();
+    if (unpatch) patches.push(unpatch);
   } catch (e) {
     console.error(`[AntiBloat] Error in ${name}:`, e);
   }
@@ -13,56 +16,51 @@ function safePatch(name, fn) {
 
 export default {
   settings,
-  patches: [],
+
   onLoad() {
-    // Default toggle values
+    // Set default settings
     storage.hideNitro ??= true;
     storage.hideQuests ??= true;
     storage.hideTabs ??= true;
 
+    // Nitro upsells
     if (storage.hideNitro) {
-      const Upsell = findByProps("tryItOutCtaText");
-      if (Upsell) {
-        this.patches.push(
-          safePatch("hideNitroUpsell", () =>
-            after("default", Upsell, () => null)
-          )
-        );
-      }
+      safePatch("hideNitroUpsell", () => {
+        const Upsell = findByProps("tryItOutCtaText");
+        if (!Upsell) return;
+        return after("default", Upsell, () => null);
+      });
     }
 
+    // Server Quests
     if (storage.hideQuests) {
-      const GuildHome = findByProps("useGuildHome");
-      if (GuildHome) {
-        this.patches.push(
-          safePatch("hideQuests", () =>
-            after("useGuildHome", GuildHome, (_, ret) => {
-              ret.shouldShowQuests = false;
-              ret.guildHomeSections = ret.guildHomeSections?.filter(
-                s => s.sectionType !== "QUESTS"
-              );
-            })
-          )
-        );
-      }
+      safePatch("hideQuests", () => {
+        const GuildHome = findByProps("useGuildHome");
+        if (!GuildHome) return;
+        return after("useGuildHome", GuildHome, (_, ret) => {
+          ret.shouldShowQuests = false;
+          ret.guildHomeSections = ret.guildHomeSections?.filter(
+            s => s.sectionType !== "QUESTS"
+          );
+        });
+      });
     }
 
+    // Explore and Monetization tabs
     if (storage.hideTabs) {
-      const TabBar = findByProps("TabBarItem");
-      if (TabBar) {
-        this.patches.push(
-          safePatch("hideExploreAndMonetization", () =>
-            after("TabBarItem", TabBar, ([args], ret) => {
-              if (["Explore", "Monetization"].includes(args.title)) return null;
-              return ret;
-            })
-          )
-        );
-      }
+      safePatch("hideExploreAndMonetization", () => {
+        const TabBar = findByProps("TabBarItem");
+        if (!TabBar) return;
+        return after("TabBarItem", TabBar, ([args], ret) => {
+          if (["Explore", "Monetization"].includes(args.title)) return null;
+          return ret;
+        });
+      });
     }
   },
+
   onUnload() {
-    this.patches.forEach(unpatch => unpatch());
-    this.patches = [];
+    patches.forEach(unpatch => unpatch());
+    patches = [];
   },
 };
